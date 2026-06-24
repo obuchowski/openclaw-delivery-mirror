@@ -34,10 +34,11 @@ is mirrored. This skill closes that one gap, **without touching OpenClaw core**.
    `agents/<agent>/sessions/sessions.json` (`.sessionFile` — follows compaction
    rotation).
 3. Appends one `delivery-mirror` assistant row to that transcript — the **same
-   row type** core writes via `appendAssistantMessageToSessionTranscript`
+   shape** core produces via `appendAssistantMessageToSessionTranscript`
    (`provider: "openclaw"`, `model: "delivery-mirror"`, zeroed usage,
-   `stopReason: "stop"`, marker `openclawDeliveryMirror: {kind:"channel-final"}`),
-   correctly `parentId`-chained to the last record.
+   `stopReason: "stop"`), `parentId`-chained to the last record. It also attaches
+   the `openclawDeliveryMirror: {kind:"channel-final"}` marker that core adds
+   optionally on real deliveries, with `sourceMessageId` when the send returns one.
 4. Optional idempotency: `--idem <key>` skips the whole op if that key was
    already handled (guards against double-delivery on cron retry).
 
@@ -118,12 +119,13 @@ rotation automatically.
 
 - **It reproduces a core row from bash.** The `delivery-mirror` row is a
   first-class core concept (written by `appendAssistantMessageToSessionTranscript`,
-  matched by core's `isDeliveryMirror` predicate on `provider`+`model`). The
-  coupling is only that we **hand-append the JSONL** instead of calling that
-  internal function — no CLI or tool exposes it. The row shape matches core,
-  including the `openclawDeliveryMirror: {kind:"channel-final"}` marker; re-verify
-  after a major OpenClaw upgrade. `--source` is recorded only in the helper's log,
-  not in the row.
+  matched by core's `isDeliveryMirror` predicate, which keys only on
+  `provider`+`model`). The coupling is only that we **hand-append the JSONL**
+  instead of calling that internal function — no CLI or tool exposes it. We
+  reproduce core's `usage` shape and attach the optional
+  `openclawDeliveryMirror` marker; the append is newline-safe; re-verify after a
+  major OpenClaw upgrade. `--source` is recorded only in the helper's log, not in
+  the row.
 - **Concurrency.** Appends are serialized with `flock` on
   `<sessionFile>.mirror.lock`. The gateway may not take that lock, so avoid
   mirroring into a topic while its agent is actively mid-run; dispatcher-style

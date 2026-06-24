@@ -23,10 +23,11 @@ mirrored. This skill closes that one gap, **without touching OpenClaw core**.
    `agents/<agent>/sessions/sessions.json` (`.sessionFile` — follows
    compaction rotation).
 3. Appends **one** `delivery-mirror` assistant row to that transcript — the
-   same row type core writes via `appendAssistantMessageToSessionTranscript`
+   same shape core produces via `appendAssistantMessageToSessionTranscript`
    (`provider: "openclaw"`, `model: "delivery-mirror"`, zeroed usage,
-   `stopReason: "stop"`, marker `openclawDeliveryMirror: {kind:"channel-final"}`),
-   correctly `parentId`-chained to the last record.
+   `stopReason: "stop"`), `parentId`-chained to the last record, with the optional
+   `openclawDeliveryMirror: {kind:"channel-final"}` marker core attaches on real
+   deliveries. The append is newline-safe and serialized with an advisory lock.
 4. Optional `--idem <key>`: skips the whole op if that key was already handled
    (guards against double-delivery on cron retry).
 
