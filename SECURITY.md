@@ -26,11 +26,14 @@ destructive action** (no deletes, no overwrites of existing data).
 
 ## Known risks and mitigations
 
-- **JSONL format coupling.** The appended row uses the observed on-disk shape of
-  OpenClaw session records, which is not a public API. *Mitigation:* mirroring is
-  best-effort and isolated to an append; re-verify after a major OpenClaw upgrade.
-  A malformed append at worst adds one ignorable row; it cannot corrupt earlier
-  records.
+- **Reproduces a core row from bash.** The `delivery-mirror` row is a first-class
+  core concept (written by `appendAssistantMessageToSessionTranscript`, matched by
+  core's `isDeliveryMirror` predicate on `provider`+`model`). The coupling is that
+  we hand-append the JSONL — including the `openclawDeliveryMirror:{kind:"channel-final"}`
+  marker — rather than calling that internal function, because no CLI or tool
+  exposes it. *Mitigation:* mirroring is best-effort and isolated to an append;
+  re-verify after a major OpenClaw upgrade. A malformed append at worst adds one
+  ignorable row; it cannot corrupt earlier records.
 - **Concurrent writes.** A live session being written by the gateway at the same
   instant could interleave. *Mitigation:* advisory `fcntl.flock` on a per-session
   lock file; intended use is dispatcher schedules when the agent is idle. Do not

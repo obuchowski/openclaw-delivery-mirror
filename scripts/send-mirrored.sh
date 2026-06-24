@@ -233,7 +233,7 @@ record = {
         },
         "stopReason": "stop",
         "timestamp": now_ms,
-        "deliveryMirror": {"source": source},
+        "openclawDeliveryMirror": {"kind": "channel-final"},
     },
 }
 

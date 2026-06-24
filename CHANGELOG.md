@@ -8,10 +8,11 @@ Initial release.
   then append one `delivery-mirror` assistant row to the owning agent's current
   session transcript (resolved from `agents/<agent>/sessions/sessions.json` →
   `sessionFile`, so it follows compaction rotation).
-- Row shape matches what OpenClaw core already writes for agentTurn cron
-  delivery (`provider: "openclaw"`, `model: "delivery-mirror"`, zeroed usage,
-  `stopReason: "stop"`), correctly `parentId`-chained to the last record. One
-  extra `message.deliveryMirror.source` field is added for tracing.
+- Row shape matches what core writes via
+  `appendAssistantMessageToSessionTranscript` (`provider: "openclaw"`,
+  `model: "delivery-mirror"`, zeroed usage, `stopReason: "stop"`, marker
+  `openclawDeliveryMirror: {kind:"channel-final"}`), correctly `parentId`-chained
+  to the last record.
 - Session resolution: explicit `--session-key` → auto-constructed key
   (`group:<to>:topic:<thread>`, `group:<to>`, `direct:<to>`) → fallback scan of
   `sessions.json` matching `deliveryContext.to` / `route.target.to` + thread id.

@@ -20,9 +20,12 @@ chat/topic, it has no idea the message was ever sent. Classic case: calendar
 agenda dispatchers and reminder scripts whose sessions run with
 `delivery.mode: none` and send via CLI.
 
-`agentTurn` crons don't have this problem — the OpenClaw delivery layer already
-writes a `delivery-mirror` row for them. This skill gives the same continuity to
-plain `--command` / script senders, **without touching OpenClaw core**.
+Messages delivered through OpenClaw's own delivery layer (agent replies,
+isolated/cron `agentTurn` delivery) don't have this problem: that layer passes a
+*mirror context* and core calls `appendAssistantMessageToSessionTranscript`,
+which writes a `delivery-mirror` row. A plain `openclaw message send` from a
+script passes no mirror context — and the CLI has no flag to set one — so nothing
+is mirrored. This skill closes that one gap, **without touching OpenClaw core**.
 
 ## What it does
 
@@ -31,9 +34,10 @@ plain `--command` / script senders, **without touching OpenClaw core**.
    `agents/<agent>/sessions/sessions.json` (`.sessionFile` — follows compaction
    rotation).
 3. Appends one `delivery-mirror` assistant row to that transcript — the **same
-   row type** OpenClaw already writes for agentTurn cron delivery
+   row type** core writes via `appendAssistantMessageToSessionTranscript`
    (`provider: "openclaw"`, `model: "delivery-mirror"`, zeroed usage,
-   `stopReason: "stop"`), correctly `parentId`-chained to the last record.
+   `stopReason: "stop"`, marker `openclawDeliveryMirror: {kind:"channel-final"}`),
+   correctly `parentId`-chained to the last record.
 4. Optional idempotency: `--idem <key>` skips the whole op if that key was
    already handled (guards against double-delivery on cron retry).
 
@@ -84,7 +88,7 @@ Replace a bare `openclaw message send …` with:
 | `--channel` | channel (default `telegram`) |
 | `--thread-id` | telegram forum topic id |
 | `--session-key` | explicit session key (else auto-resolved) |
-| `--source` | label for logs / `deliveryMirror.source` |
+| `--source` | label recorded in the helper log (not in the row) |
 | `--idem` | idempotency key; skip if already handled (exit 3) |
 | `--openclaw-home` | OpenClaw home (default `$OPENCLAW_HOME` or `~/.openclaw`) |
 | `--openclaw-bin` | openclaw binary (default `openclaw` on PATH) |
@@ -112,11 +116,14 @@ rotation automatically.
 
 ## Caveats (read before trusting it blindly)
 
-- **JSONL-format coupling.** It appends to the agent's session transcript using
-  the observed on-disk row shape. That format is stable in practice (it mirrors
-  what core already writes) but is **not a public API** — re-verify after a major
-  OpenClaw upgrade. The append adds one extra `message.deliveryMirror.source`
-  field for tracing; unknown fields are ignored by the loader.
+- **It reproduces a core row from bash.** The `delivery-mirror` row is a
+  first-class core concept (written by `appendAssistantMessageToSessionTranscript`,
+  matched by core's `isDeliveryMirror` predicate on `provider`+`model`). The
+  coupling is only that we **hand-append the JSONL** instead of calling that
+  internal function — no CLI or tool exposes it. The row shape matches core,
+  including the `openclawDeliveryMirror: {kind:"channel-final"}` marker; re-verify
+  after a major OpenClaw upgrade. `--source` is recorded only in the helper's log,
+  not in the row.
 - **Concurrency.** Appends are serialized with `flock` on
   `<sessionFile>.mirror.lock`. The gateway may not take that lock, so avoid
   mirroring into a topic while its agent is actively mid-run; dispatcher-style

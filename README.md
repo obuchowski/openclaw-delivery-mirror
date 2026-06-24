@@ -9,10 +9,12 @@ transcript. Next time that agent wakes in the chat/topic, it has no idea the
 message was ever sent. Calendar agenda dispatchers, reminder pings, and
 status notifiers all hit this.
 
-`agentTurn` crons don't have the problem — OpenClaw's delivery layer already
-writes a `delivery-mirror` row for them. This skill gives the **same
-continuity** to plain `--command`/script senders, **without touching OpenClaw
-core**.
+Messages sent through OpenClaw's own delivery layer (agent replies,
+isolated/cron `agentTurn` delivery) don't have this problem: that layer passes a
+*mirror context*, so core calls `appendAssistantMessageToSessionTranscript` and
+writes a `delivery-mirror` row. A plain `openclaw message send` from a script
+passes no mirror context — and the CLI has no flag to set one — so nothing is
+mirrored. This skill closes that one gap, **without touching OpenClaw core**.
 
 ## What it does
 
@@ -21,9 +23,10 @@ core**.
    `agents/<agent>/sessions/sessions.json` (`.sessionFile` — follows
    compaction rotation).
 3. Appends **one** `delivery-mirror` assistant row to that transcript — the
-   same row type OpenClaw core already writes for agentTurn cron delivery
+   same row type core writes via `appendAssistantMessageToSessionTranscript`
    (`provider: "openclaw"`, `model: "delivery-mirror"`, zeroed usage,
-   `stopReason: "stop"`), correctly `parentId`-chained to the last record.
+   `stopReason: "stop"`, marker `openclawDeliveryMirror: {kind:"channel-final"}`),
+   correctly `parentId`-chained to the last record.
 4. Optional `--idem <key>`: skips the whole op if that key was already handled
    (guards against double-delivery on cron retry).
 
@@ -63,7 +66,7 @@ bash scripts/send-mirrored.sh <flags>
 | `--channel` | channel (default `telegram`) |
 | `--thread-id` | Telegram forum topic id |
 | `--session-key` | explicit session key (else auto-resolved) |
-| `--source` | label for logs / `deliveryMirror.source` |
+| `--source` | label recorded in the helper log (not in the row) |
 | `--idem` | idempotency key; skip if already handled (exit 3) |
 | `--openclaw-home` | OpenClaw home (default `$OPENCLAW_HOME` or `~/.openclaw`) |
 | `--openclaw-bin` | openclaw binary (default `openclaw` on PATH) |
@@ -88,9 +91,11 @@ always appends to the entry's `sessionFile`, so it follows compaction rotation.
 
 ## Caveats
 
-- **JSONL-format coupling.** The appended row uses the observed on-disk record
-  shape — stable in practice, but not a public API. Re-verify after a major
-  OpenClaw upgrade. See [SECURITY.md](SECURITY.md).
+- **Reproduces a core row from bash.** `delivery-mirror` is a first-class core
+  concept (`appendAssistantMessageToSessionTranscript` / core's `isDeliveryMirror`
+  predicate); the only coupling is that we hand-append the JSONL because no CLI or
+  tool exposes that function. Re-verify after a major OpenClaw upgrade. See
+  [SECURITY.md](SECURITY.md).
 - **Concurrency.** Appends are serialized with an advisory `fcntl.flock`; the
   safe, intended case is dispatcher-style schedules when the agent is idle.
 - **No network of its own, no model, no destructive ops.**
