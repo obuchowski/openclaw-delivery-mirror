@@ -1,5 +1,21 @@
 # Changelog
 
+## 1.0.1 — 2026-06-24
+
+Security-audit remediation (ClawHub / SkillSpector review):
+- Pass mirror inputs to the embedded Python as positional **argv instead of
+  environment variables** — removes the `os.environ` access pattern flagged as
+  "env harvesting." The helper never reads ambient env for data; every value
+  comes from this script's own flags.
+- Declare **permissions & write scope** explicitly (new SKILL.md section + the
+  publish ClawScan note): local FS writes are append-only to the agent's own
+  transcript, plus state/log/lock files under `<openclaw-home>` — no network of
+  its own, no model, no destructive ops.
+- `publish-for-clawhub.sh`: portable version/changelog extraction (POSIX `sed`,
+  dropped GNU-awk `match(...,array)`); the printed publish command is now
+  `printf %q`-quoted so changelog text containing backticks/quotes can't break
+  quoting or execute as shell.
+
 ## 1.0.0 — 2026-06-24
 
 Initial release.

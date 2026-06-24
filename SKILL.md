@@ -52,6 +52,28 @@ A true runtime plugin would mean changing/extending OpenClaw core. This stays a
 self-contained script you drop next to your other command-cron scripts, so it
 works on any OpenClaw host and upgrades independently.
 
+## Permissions & write scope
+
+This skill performs **local filesystem writes** and runs the `openclaw` CLI.
+Exactly what it touches, and nothing else:
+
+- **Reads:** `<openclaw-home>/agents/<agent>/sessions/sessions.json` — only to
+  resolve the target session's `sessionFile`.
+- **Appends (never edits or deletes):** one JSONL line to that `sessionFile` —
+  the agent's own transcript.
+- **Writes:** idempotency state `…/delivery-mirror/state/<agent>.seen`, a log
+  `…/delivery-mirror/mirror.log`, and advisory lock files (`*.mirror.lock`,
+  `<agent>.seen.lock`).
+- **Executes:** `openclaw message send` to deliver the message.
+- **Does NOT:** make network calls of its own, run any model, read ambient
+  environment for data (all inputs come from this script's flags and are passed
+  to the embedded Python as positional `argv`, not env), or modify/delete any
+  existing transcript record.
+
+`--openclaw-home` confines every path above — point it at a scratch dir to dry-run
+safely. Treat the **caller** (your cron/script) as the trust source: message text
+is stored verbatim. Full threat model in [SECURITY.md](SECURITY.md).
+
 ## Usage
 
 ```bash

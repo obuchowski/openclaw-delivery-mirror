@@ -28,7 +28,7 @@ cp "$REPO_ROOT/CHANGELOG.md" "$OUT/"
 echo "Created: $OUT"
 ls -R "$OUT"
 echo ""
-CLAWSCAN_NOTE='After "openclaw message send" the helper appends ONE delivery-mirror JSONL row to the owning agent OWN session transcript (resolved via agents/<agent>/sessions/sessions.json -> sessionFile) to restore continuity for command-cron/script deliveries. It reads sessions.json and appends a single assistant row; it makes no network calls of its own, runs no model, and performs no destructive operations. Advisory fcntl.flock serializes the append.'
+CLAWSCAN_NOTE='Purpose: after "openclaw message send" the helper appends ONE delivery-mirror JSONL row to the OWNING AGENT''s own session transcript (resolved via agents/<agent>/sessions/sessions.json -> sessionFile) so command-cron/script deliveries stay in the agent context. PERMISSIONS / WRITE SCOPE (declared, see SKILL.md + SECURITY.md): reads only sessions.json; APPENDS one assistant row to that session file (never edits or deletes existing records); writes idempotency-state, a log, and advisory lock files under <openclaw-home>/delivery-mirror and *.mirror.lock. It makes NO network calls of its own, runs NO model, and performs NO destructive operations. On env access: the embedded Python receives all inputs as positional argv produced by the script''s own flags — it does NOT read ambient environment variables for data, so it cannot harvest or exfiltrate unrelated env. All paths are confined by --openclaw-home.'
 
 # Print a copy-paste-safe command. printf %q shell-quotes every arg, so the
 # changelog body (which contains backticks and quotes) can never be executed or

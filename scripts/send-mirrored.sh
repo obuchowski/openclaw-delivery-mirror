@@ -135,22 +135,20 @@ fi
 
 # ---- 2) mirror into the session transcript (best-effort) --------------------
 if [ "$NO_MIRROR" != "1" ]; then
-  OC_MSG="$MESSAGE" \
-  OC_SESSIONS_JSON="$SESSIONS_JSON" \
-  OC_SESSION_KEY="$SESSION_KEY" \
-  OC_CHANNEL="$CHANNEL" OC_AGENT="$AGENT" OC_TO="$TO" OC_THREAD="$THREAD" \
-  OC_SOURCE="$SOURCE" OC_SEND_JSON="$SEND_JSON" \
-  python3 - <<'PY'
-import os, sys, json, uuid, time, fcntl
+  # Inputs are passed as positional argv (NOT environment variables): the helper
+  # never reads ambient env for data, so it cannot harvest or leak unrelated
+  # environment. All values below are produced by this script's own flags.
+  python3 - "$SESSIONS_JSON" "$SESSION_KEY" "$CHANNEL" "$AGENT" "$TO" "$THREAD" "$MESSAGE" "$SEND_JSON" <<'PY'
+import sys, json, uuid, time, fcntl
 
-sj_path = os.environ["OC_SESSIONS_JSON"]
-key     = os.environ.get("OC_SESSION_KEY", "")
-channel = os.environ["OC_CHANNEL"]
-agent   = os.environ["OC_AGENT"]
-to      = os.environ["OC_TO"]
-thread  = os.environ.get("OC_THREAD", "")
-msg     = os.environ["OC_MSG"]
-send_js = os.environ.get("OC_SEND_JSON", "")
+sj_path = sys.argv[1]
+key     = sys.argv[2]
+channel = sys.argv[3]
+agent   = sys.argv[4]
+to      = sys.argv[5]
+thread  = sys.argv[6]
+msg     = sys.argv[7]
+send_js = sys.argv[8]
 
 def warn(m): print(f"delivery-mirror: WARN mirror: {m}", file=sys.stderr)
 
