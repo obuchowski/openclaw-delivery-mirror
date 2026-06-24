@@ -1,6 +1,6 @@
 ---
 name: delivery-mirror
-description: Mirror cron/script deliveries into the agent's session transcript — scheduled & isolated-cron messages persist in context. Session continuity, no core changes.
+description: Mirror cron/script deliveries into agent session transcripts so scheduled and isolated-cron messages persist in context. Session continuity, no core changes.
 metadata: {"openclaw":{"emoji":"🪞","homepage":"https://github.com/obuchowski/openclaw-delivery-mirror","os":["linux","darwin"],"requires":{"bins":["bash","python3"]}}}
 ---
 
