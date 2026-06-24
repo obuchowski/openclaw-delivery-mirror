@@ -24,6 +24,7 @@ cp "$REPO_ROOT/SKILL.md" "$OUT/"
 cp -r "$REPO_ROOT/scripts" "$OUT/scripts"
 cp "$REPO_ROOT/SECURITY.md" "$OUT/"
 cp "$REPO_ROOT/CHANGELOG.md" "$OUT/"
+[ -f "$REPO_ROOT/LICENSE" ] && cp "$REPO_ROOT/LICENSE" "$OUT/"
 
 echo "Created: $OUT"
 ls -R "$OUT"
